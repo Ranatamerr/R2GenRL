@@ -130,7 +130,7 @@ class BaseTrainer(object):
             record_table = pd.read_csv(record_path)
         tmp_log = copy.deepcopy(log)
         tmp_log.update(**self.args.__dict__)
-        record_table = record_table.append(tmp_log, ignore_index=True)
+        record_table = pd.concat([record_table, pd.DataFrame([tmp_log])], ignore_index=True)
         record_table.to_csv(record_path, index=False)
 
     def _print_best(self):

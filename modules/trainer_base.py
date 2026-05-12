@@ -13,6 +13,10 @@ class BaseTrainer(object):
     def __init__(self, model, criterion, metric_ftns, optimizer, args):
         self.args = args
 
+        logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
+                            datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
         # setup GPU device if available, move model into configured device
         self.device, device_ids = self._prepare_device(args.n_gpu)
         self.model = model.to(self.device)
@@ -45,10 +49,6 @@ class BaseTrainer(object):
 
         self.best_recorder = {'val': {self.mnt_metric: self.mnt_best},
                               'test': {self.mnt_metric_test: self.mnt_best}}
-
-        logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                            datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
 
     @abstractmethod
     def _train_epoch(self, epoch):
@@ -112,7 +112,7 @@ class BaseTrainer(object):
             record_table = pd.DataFrame()
         else:
             record_table = pd.read_csv(record_path)
-        record_table = record_table.append(log, ignore_index=True)
+        record_table = pd.concat([record_table, pd.DataFrame([log])], ignore_index=True)
         record_table.to_csv(record_path, index=False)
 
     def _print_best_to_file(self):
@@ -131,8 +131,7 @@ class BaseTrainer(object):
             record_table = pd.DataFrame()
         else:
             record_table = pd.read_csv(record_path)
-        record_table = record_table.append(self.best_recorder['val'], ignore_index=True)
-        record_table = record_table.append(self.best_recorder['test'], ignore_index=True)
+        record_table = pd.concat([record_table, pd.DataFrame([self.best_recorder['val']]), pd.DataFrame([self.best_recorder['test']])], ignore_index=True)
         record_table.to_csv(record_path, index=False)
 
     def _prepare_device(self, n_gpu_use):

@@ -8,7 +8,10 @@ class VisualExtractor(nn.Module):
         super(VisualExtractor, self).__init__()
         self.visual_extractor = args.visual_extractor
         self.pretrained = args.visual_extractor_pretrained
-        model = getattr(models, self.visual_extractor)(pretrained=self.pretrained)
+        weights_map = {name[:-len('_Weights')].lower(): cls for name, cls in vars(models).items() if name.endswith('_Weights')}
+        weights_cls = weights_map.get(self.visual_extractor.lower())
+        weights = weights_cls.DEFAULT if (self.pretrained and weights_cls) else None
+        model = getattr(models, self.visual_extractor)(weights=weights)
         modules = list(model.children())[:-2]
         self.model = nn.Sequential(*modules)
         self.avg_fnt = torch.nn.AvgPool2d(kernel_size=7, stride=1, padding=0)
