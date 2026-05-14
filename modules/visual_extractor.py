@@ -1,24 +1,35 @@
 import torch
 import torch.nn as nn
-import torchvision.models as models
+import open_clip
 
 
 class VisualExtractor(nn.Module):
     def __init__(self, args):
         super(VisualExtractor, self).__init__()
-        self.visual_extractor = args.visual_extractor
-        self.pretrained = args.visual_extractor_pretrained
-        weights_map = {name[:-len('_Weights')].lower(): cls for name, cls in vars(models).items() if name.endswith('_Weights')}
-        weights_cls = weights_map.get(self.visual_extractor.lower())
-        weights = weights_cls.DEFAULT if (self.pretrained and weights_cls) else None
-        model = getattr(models, self.visual_extractor)(weights=weights)
-        modules = list(model.children())[:-2]
-        self.model = nn.Sequential(*modules)
-        self.avg_fnt = torch.nn.AvgPool2d(kernel_size=7, stride=1, padding=0)
+        model, _, _ = open_clip.create_model_and_transforms(
+            'hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224'
+        )
+        self.vit = model.visual
+        for param in self.vit.parameters():
+            param.requires_grad = False
+        self.vit.eval()
+
+        # Single trainable projection for patch tokens: 768 → d_vf
+        self.proj = nn.Linear(768, args.d_vf)
+
+    def train(self, mode=True):
+        super(VisualExtractor, self).train(mode)
+        # Keep ViT in eval mode regardless of parent training mode
+        self.vit.eval()
+        return self
 
     def forward(self, images):
-        patch_feats = self.model(images)
-        avg_feats = self.avg_fnt(patch_feats).squeeze().reshape(-1, patch_feats.size(1))
-        batch_size, feat_size, _, _ = patch_feats.shape
-        patch_feats = patch_feats.reshape(batch_size, feat_size, -1).permute(0, 2, 1)
-        return patch_feats, avg_feats
+        with torch.no_grad():
+            # (B, 197, 768): CLS token + 196 patch tokens
+            feats = self.vit.trunk.forward_features(images)
+
+        patch_feats = feats[:, 1:, :]             # (B, 196, 768)
+        patch_feats = self.proj(patch_feats)       # (B, 196, d_vf)
+        fc_feats = patch_feats.mean(dim=1)         # (B, d_vf)
+
+        return patch_feats, fc_feats

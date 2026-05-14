@@ -17,18 +17,19 @@ class R2DataLoader(DataLoader):
 
         if split == 'train':
             self.transform = transforms.Compose([
-                transforms.Resize(256),
-                transforms.RandomCrop(224),
+                transforms.RandomResizedCrop(224, scale=(0.9, 1.0), ratio=(0.75, 1.3333),
+                                             interpolation=transforms.InterpolationMode.BICUBIC),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize((0.485, 0.456, 0.406),
-                                     (0.229, 0.224, 0.225))])
+                transforms.Normalize((0.48145466, 0.4578275, 0.40821073),
+                                     (0.26862954, 0.26130258, 0.27577711))])
         else:
             self.transform = transforms.Compose([
-                transforms.Resize((224, 224)),
+                transforms.Resize(224, interpolation=transforms.InterpolationMode.BICUBIC),
+                transforms.CenterCrop(224),
                 transforms.ToTensor(),
-                transforms.Normalize((0.485, 0.456, 0.406),
-                                     (0.229, 0.224, 0.225))])
+                transforms.Normalize((0.48145466, 0.4578275, 0.40821073),
+                                     (0.26862954, 0.26130258, 0.27577711))])
 
         if self.dataset_name == 'iu_xray':
             self.dataset = IuxrayMultiImageDataset(self.args, self.tokenizer, self.split, transform=self.transform)
