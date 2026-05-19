@@ -27,6 +27,7 @@ def parse_agrs():
     # Model settings (for visual extractor)
     parser.add_argument('--visual_extractor', type=str, default='resnet101', help='the visual extractor to be used.')
     parser.add_argument('--visual_extractor_pretrained', type=bool, default=True, help='whether to load the pretrained visual extractor')
+    parser.add_argument('--freeze_vit', type=lambda x: x.lower() != 'false', default=True, help='whether to freeze ViT parameters.')
     parser.add_argument('--num_labels', type=int, default=14, help='the size of the label set')
 
     # Model settings (for Transformer)

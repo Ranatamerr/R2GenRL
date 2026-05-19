@@ -6,26 +6,32 @@ import open_clip
 class VisualExtractor(nn.Module):
     def __init__(self, args):
         super(VisualExtractor, self).__init__()
+        self.freeze_vit = getattr(args, 'freeze_vit', True)
         model, _, _ = open_clip.create_model_and_transforms(
             'hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224'
         )
         self.vit = model.visual
-        for param in self.vit.parameters():
-            param.requires_grad = False
-        self.vit.eval()
+        if self.freeze_vit:
+            for param in self.vit.parameters():
+                param.requires_grad = False
+            self.vit.eval()
 
         # Single trainable projection for patch tokens: 768 → d_vf
         self.proj = nn.Linear(768, args.d_vf)
 
     def train(self, mode=True):
         super(VisualExtractor, self).train(mode)
-        # Keep ViT in eval mode regardless of parent training mode
-        self.vit.eval()
+        if self.freeze_vit:
+            # Keep ViT in eval mode regardless of parent training mode
+            self.vit.eval()
         return self
 
     def forward(self, images):
-        with torch.no_grad():
-            # (B, 197, 768): CLS token + 196 patch tokens
+        if self.freeze_vit:
+            with torch.no_grad():
+                # (B, 197, 768): CLS token + 196 patch tokens
+                feats = self.vit.trunk.forward_features(images)
+        else:
             feats = self.vit.trunk.forward_features(images)
 
         patch_feats = feats[:, 1:, :]             # (B, 196, 768)

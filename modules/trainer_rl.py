@@ -381,11 +381,6 @@ class Trainer(BaseTrainer):
                 val_res.extend(reports)
                 val_gts.extend(ground_truths)
 
-                for id, re, gt in zip(images_id, reports, ground_truths):
-                    print(id)
-                    print('[Generated]: {}'.format(re))
-                    print('[Ground Truth]: {}'.format(gt))
-
             val_met = self.metric_ftns({i: [gt] for i, gt in enumerate(val_gts)},
                                        {i: [re] for i, re in enumerate(val_res)})
             log.update(**{'val_' + k: v for k, v in val_met.items()})
