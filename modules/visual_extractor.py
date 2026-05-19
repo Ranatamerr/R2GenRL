@@ -1,16 +1,21 @@
 import torch
 import torch.nn as nn
-import open_clip
+import timm
 
 
 class VisualExtractor(nn.Module):
     def __init__(self, args):
         super(VisualExtractor, self).__init__()
         self.freeze_vit = getattr(args, 'freeze_vit', True)
-        model, _, _ = open_clip.create_model_and_transforms(
-            'hf-hub:microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224'
-        )
-        self.vit = model.visual
+
+        self.vit = timm.create_model('vit_base_patch16_224', pretrained=False, num_classes=0)
+
+        ckpt_path = '/root/.cache/huggingface/hub/models--microsoft--BiomedCLIP-PubMedBERT_256-vit_base_patch16_224/snapshots/9f341de24bfb00180f1b847274256e9b65a3a32e/open_clip_pytorch_model.bin'
+        state_dict = torch.load(ckpt_path, map_location='cpu')
+        visual_weights = {k[len('visual.'):]: v for k, v in state_dict.items() if k.startswith('visual.')}
+        missing, unexpected = self.vit.load_state_dict(visual_weights, strict=False)
+        print(f"Visual weights loaded. Missing: {len(missing)}, Unexpected: {len(unexpected)}")
+
         if self.freeze_vit:
             for param in self.vit.parameters():
                 param.requires_grad = False
@@ -30,9 +35,9 @@ class VisualExtractor(nn.Module):
         if self.freeze_vit:
             with torch.no_grad():
                 # (B, 197, 768): CLS token + 196 patch tokens
-                feats = self.vit.trunk.forward_features(images)
+                feats = self.vit.forward_features(images)
         else:
-            feats = self.vit.trunk.forward_features(images)
+            feats = self.vit.forward_features(images)
 
         patch_feats = feats[:, 1:, :]             # (B, 196, 768)
         patch_feats = self.proj(patch_feats)       # (B, 196, d_vf)
