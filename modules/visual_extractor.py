@@ -12,7 +12,7 @@ class VisualExtractor(nn.Module):
 
         ckpt_path = '/root/.cache/huggingface/hub/models--microsoft--BiomedCLIP-PubMedBERT_256-vit_base_patch16_224/snapshots/9f341de24bfb00180f1b847274256e9b65a3a32e/open_clip_pytorch_model.bin'
         state_dict = torch.load(ckpt_path, map_location='cpu')
-        visual_weights = {k[len('visual.'):]: v for k, v in state_dict.items() if k.startswith('visual.')}
+        visual_weights = {k[len('visual.trunk.'):]: v for k, v in state_dict.items() if k.startswith('visual.trunk.')}
         missing, unexpected = self.vit.load_state_dict(visual_weights, strict=False)
         print(f"Visual weights loaded. Missing: {len(missing)}, Unexpected: {len(unexpected)}")
 
