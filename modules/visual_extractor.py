@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import timm
@@ -10,7 +11,10 @@ class VisualExtractor(nn.Module):
 
         self.vit = timm.create_model('vit_base_patch16_224', pretrained=False, num_classes=0)
 
-        ckpt_path = '/root/.cache/huggingface/hub/models--microsoft--BiomedCLIP-PubMedBERT_256-vit_base_patch16_224/snapshots/9f341de24bfb00180f1b847274256e9b65a3a32e/open_clip_pytorch_model.bin'
+        ckpt_path = os.environ.get(
+            'BIOMEDCLIP_CKPT_PATH',
+            '/content/drive/MyDrive/Bachelor/hf_cache/hub/models--microsoft--BiomedCLIP-PubMedBERT_256-vit_base_patch16_224/snapshots/9f341de24bfb00180f1b847274256e9b65a3a32e/open_clip_pytorch_model.bin'
+        )
         state_dict = torch.load(ckpt_path, map_location='cpu')
         visual_weights = {k[len('visual.trunk.'):]: v for k, v in state_dict.items() if k.startswith('visual.trunk.')}
         missing, unexpected = self.vit.load_state_dict(visual_weights, strict=False)
