@@ -9,17 +9,20 @@ import numpy as np
 import logging
 
 from pycocoevalcap.bleu.bleu import Bleu
+from pycocoevalcap.cider.cider import Cider
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                             datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 Bleu_scorer = None
+Cider_scorer = None
 
 
 def init_scorer():
-    global Bleu_scorer
+    global Bleu_scorer, Cider_scorer
     Bleu_scorer = Bleu_scorer or Bleu(4)
+    Cider_scorer = Cider_scorer or Cider()
 
 
 def array_to_str(arr):
@@ -53,10 +56,10 @@ def get_self_critical_reward(greedy_res, data_gts, gen_result):
     res__ = {i: res[i] for i in range(len(res_))}
     gts_ = {i: gts[i // seq_per_img] for i in range(gen_result_size)}
     gts_.update({i + gen_result_size: gts[i] for i in range(batch_size)})
-    _, bleu_scores = Bleu_scorer.compute_score(gts_, res__, verbose = 0)
-    bleu_scores = np.array(bleu_scores[3])
-    # logger.info('Bleu scores: {:.4f}.'.format(_[3]))
-    scores = bleu_scores
+    # CIDEr reward (replaces BLEU-4 for partial-freeze experiment)
+    _, cider_scores = Cider_scorer.compute_score(gts_, res__)
+    cider_scores = np.array(cider_scores)
+    scores = cider_scores
 
     scores = scores[:gen_result_size].reshape(batch_size, seq_per_img) - scores[-batch_size:][:, np.newaxis]
     scores = scores.reshape(gen_result_size)
