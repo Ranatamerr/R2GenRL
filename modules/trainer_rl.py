@@ -198,10 +198,29 @@ class BaseTrainer(object):
         filename = os.path.join(self.checkpoint_dir, 'current_checkpoint.pth')
         torch.save(state, filename)
         self.logger.info("Saving checkpoint: {} ...".format(filename))
+        try:
+            import shutil as _shutil, os as _os
+            _DRIVE = _os.environ.get('DRIVE_CKPT_DIR', '/content/drive/MyDrive/Bachelor/take3/checkpoints_biomed')
+            _os.makedirs(_DRIVE, exist_ok=True)
+            _dst = _os.path.join(_DRIVE, f'epoch_{epoch:03d}.pth')
+            _shutil.copy2(filename, _dst)
+            self.logger.info(f"[Drive] Saved epoch {epoch} to {_dst}")
+        except Exception as _e:
+            self.logger.warning(f"[Drive] FAILED to save epoch {epoch}: {_e}")
         if save_best:
             best_path = os.path.join(self.checkpoint_dir, 'model_best.pth')
             torch.save(state, best_path)
             self.logger.info("Saving current best: model_best.pth ...")
+            try:
+                import shutil as _shutil, os as _os
+                _DRIVE = _os.environ.get('DRIVE_CKPT_DIR', '/content/drive/MyDrive/Bachelor/take3/checkpoints_biomed')
+                _os.makedirs(_DRIVE, exist_ok=True)
+                _src = _os.path.join(self.checkpoint_dir, 'model_best.pth')
+                _dst = _os.path.join(_DRIVE, 'model_best.pth')
+                _shutil.copy2(_src, _dst)
+                self.logger.info(f"[Drive] Saved model_best.pth to {_dst}")
+            except Exception as _e:
+                self.logger.warning(f"[Drive] FAILED to save model_best: {_e}")
 
     def _resume_checkpoint(self, resume_path):
         resume_path = str(resume_path)
